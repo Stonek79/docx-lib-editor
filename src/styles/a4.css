@@ -1,0 +1,359 @@
+/* Переменные CSS для настройки документов */
+:root {
+    /* Основные цвета */
+    --docx-text-color: #000000;
+    --docx-background-color: #ffffff;
+    --docx-accent1-color: #4472c4;
+    --docx-accent2-color: #ed7d31;
+    --docx-accent3-color: #a5a5a5;
+    --docx-accent4-color: #ffc000;
+    --docx-accent5-color: #5b9bd5;
+    --docx-accent6-color: #70ad47;
+
+    /* Шрифты */
+    --docx-major-font: 'Calibri', 'Arial', sans-serif;
+    --docx-minor-font: 'Times New Roman', Times, serif;
+
+    /* Размеры */
+    --docx-base-font-size: 12pt;
+    --docx-h1-font-size: 16pt;
+    --docx-h2-font-size: 14pt;
+    --docx-h3-font-size: 13pt;
+    --docx-h4-font-size: 12pt;
+
+    /* Отступы */
+    --docx-page-margin: 20mm;
+    --docx-paragraph-spacing: 12pt;
+
+    /* Размеры страницы A4 */
+    --a4-width: 210mm;
+    --a4-height: 297mm;
+    --a4-content-height: calc(var(--a4-height) - (var(--docx-page-margin) * 2));
+}
+
+/* Базовые стили для A4 страницы */
+.a4-page {
+    width: var(--a4-width);
+    min-height: var(--a4-height);
+    padding: var(--docx-page-margin);
+    margin: 10mm auto;
+    background-color: var(--docx-background-color);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    position: relative;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: normal;
+    /* hyphens: auto; */
+}
+
+/* Общие правила для всех элементов внутри a4-page */
+.a4-page * {
+    box-sizing: border-box;
+}
+
+.a4-page p {
+    padding: 0;
+    margin-top: 0;
+    line-height: 1.15;
+    font-family: var(--docx-minor-font);
+    font-size: var(--docx-base-font-size);
+    color: var(--docx-text-color);
+    white-space: pre-wrap;
+    min-height: 1em; /* Обеспечивает высоту для пустых параграфов */
+}
+
+/* Стили для параграфов с разным выравниванием */
+.a4-page .align-center {
+    text-align: center;
+}
+.a4-page .align-right {
+    text-align: right;
+}
+.a4-page .align-justify {
+    text-align: justify;
+}
+
+/* Стили для отступов с использованием calc */
+.a4-page .indent-1 {
+    padding-left: calc(1.27cm);
+}
+.a4-page .indent-2 {
+    padding-left: calc(2.54cm);
+}
+.a4-page .indent-3 {
+    padding-left: calc(3.81cm);
+}
+
+/* Стили для текста с разным форматированием */
+.a4-page strong {
+    font-weight: bold;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    hyphens: none;
+    -webkit-hyphens: none;
+    -ms-hyphens: none;
+}
+.a4-page em {
+    font-style: italic;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    hyphens: none;
+    -webkit-hyphens: none;
+    -ms-hyphens: none;
+}
+.a4-page u {
+    text-decoration: underline;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    hyphens: none;
+    -webkit-hyphens: none;
+    -ms-hyphens: none;
+}
+.a4-page s {
+    text-decoration: line-through;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    hyphens: none;
+    -webkit-hyphens: none;
+    -ms-hyphens: none;
+}
+
+/* Стили для заголовков */
+.a4-page h1 {
+    font-size: var(--docx-h1-font-size);
+    font-weight: bold;
+    padding: 0;
+    font-family: var(--docx-major-font);
+}
+.a4-page h2 {
+    font-size: var(--docx-h2-font-size);
+    font-weight: bold;
+    padding: 0;
+    font-family: var(--docx-major-font);
+}
+.a4-page h3 {
+    font-size: var(--docx-h3-font-size);
+    font-weight: bold;
+    padding: 0;
+    font-family: var(--docx-major-font);
+}
+.a4-page h4 {
+    font-size: var(--docx-h4-font-size);
+    font-weight: bold;
+    padding: 0;
+    font-family: var(--docx-major-font);
+}
+
+/* Стили для списков */
+.a4-page ul,
+.a4-page ol {
+    margin-left: calc(var(--docx-page-margin) / 2);
+    margin-top: 0;
+    padding-left: calc(var(--docx-page-margin) / 2);
+}
+
+/* Стили для нумерации */
+.a4-page .numbering {
+    min-width: 1.5em;
+    font-weight: normal;
+    padding-right: .3em;
+}
+
+
+/* Улучшенные стили для таблиц */
+.a4-page table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.a4-page td,
+.a4-page th {
+    border: 1px solid #ddd;
+    padding: 8px;
+    vertical-align: top;
+    max-width: 0; /* Важно для работы переноса текста в ячейках таблицы */
+}
+
+/* Стили для разных частей таблицы */
+.a4-page table tr.first-row {
+    font-weight: bold;
+    background-color: var(--docx-accent1-color);
+    color: white;
+}
+
+.a4-page table tr.last-row {
+    font-weight: bold;
+    border-top: 2px solid var(--docx-accent3-color);
+}
+
+.a4-page table td.first-col {
+    font-weight: bold;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.a4-page table td.last-col {
+    font-style: italic;
+}
+
+.a4-page table tr.odd-row {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.a4-page table tr.even-row {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* Стили для колонтитулов */
+.a4-page .header {
+    position: absolute;
+    top: 10mm;
+    left: var(--docx-page-margin);
+    right: var(--docx-page-margin);
+    height: 10mm;
+    border-bottom: 1px solid #eee;
+    font-size: 10pt;
+    color: var(--docx-accent3-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.a4-page .footer {
+    position: absolute;
+    bottom: 10mm;
+    left: var(--docx-page-margin);
+    right: var(--docx-page-margin);
+    height: 10mm;
+    border-top: 1px solid #eee;
+    font-size: 10pt;
+    color: var(--docx-accent3-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Стили для сносок */
+.a4-page .footnote-ref {
+    vertical-align: super;
+    font-size: 0.8em;
+    color: var(--docx-accent1-color);
+    text-decoration: none;
+}
+
+.a4-page .footnotes {
+    border-top: 1px solid #ccc;
+    margin-top: 20px;
+    padding-top: 10px;
+    font-size: 10pt;
+    color: var(--docx-accent3-color);
+}
+
+.a4-page .footnote {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+.a4-page .footnote-number {
+    min-width: 20px;
+    font-weight: bold;
+}
+
+/* Контейнер для всех страниц A4 */
+.a4-pages-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background-color: #f0f0f0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Стили для разрывов страниц */
+.page-break {
+    display: none;
+}
+
+/* Стили для разрывов колонок */
+.column-break {
+    display: block;
+    break-after: column;
+}
+
+/* Стили для неразрывных элементов */
+.non-breakable {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Стили для элементов, которые должны начинаться с новой страницы */
+.page-break-before {
+    page-break-before: always;
+    break-before: page;
+}
+
+/* Стили для элементов, после которых должна начинаться новая страница */
+.page-break-after {
+    page-break-after: always;
+    break-after: page;
+}
+
+/* Стили для комментариев */
+.a4-page .comment-marker {
+    background-color: rgba(var(--docx-accent4-color), 0.2);
+    position: relative;
+    cursor: pointer;
+}
+
+.a4-page .comment-content {
+    display: none;
+    position: absolute;
+    right: -220px;
+    top: 0;
+    width: 200px;
+    padding: 10px;
+    background-color: white;
+    border: 1px solid var(--docx-accent3-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    font-size: 10pt;
+}
+
+.a4-page .comment-marker:hover .comment-content {
+    display: block;
+}
+
+/* Очистка обтекания */
+.a4-page .clearfix::after {
+    content: "";
+    clear: both;
+    display: table;
+}
+
+/* При печати - показываем разрывы страниц */
+@media print {
+    .a4-pages-container {
+        display: block;
+        padding: 0;
+        background-color: transparent;
+    }
+    
+    .a4-page {
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+    }
+    
+    .a4-page:last-child {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+}

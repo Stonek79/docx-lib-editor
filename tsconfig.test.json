@@ -1,0 +1,24 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "jsx": "react",
+        "esModuleInterop": true,
+        "allowJs": true,
+        "isolatedModules": false,
+        "types": ["jest", "node"],
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["src/*"]
+        }
+    },
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "__tests__/**/*.ts",
+        "__tests__/**/*.tsx"
+    ],
+    "exclude": [
+        "node_modules",
+        "__tests__/fixtures"
+    ]
+}
