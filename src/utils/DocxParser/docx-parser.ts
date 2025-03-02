@@ -25,7 +25,7 @@ import { DocxStyle } from '@/types/docx-properties'
 import { NumberingDefinition } from '@/types/numbering'
 import { Relationship } from '@/types/relationships'
 import { DocumentParser } from './parsers/document-parser'
-
+import { FootnoteConverter } from './html-converters/footnote-converter'
 /**
  * Основной класс для парсинга DOCX документов.
  * Координирует работу всех остальных парсеров и отвечает за:
@@ -52,7 +52,7 @@ export class DocxParser extends BaseParser {
     // HTML конвертеры
     private paragraphConverter: ParagraphConverter
     private tableConverter: TableConverter
-
+    private footnoteConverter: FootnoteConverter
     // Кэши данных
     private styles: Map<string, DocxStyle> = new Map()
     private numbering: Map<string, NumberingDefinition> = new Map()
@@ -86,6 +86,7 @@ export class DocxParser extends BaseParser {
         // Инициализация HTML конвертеров
         this.paragraphConverter = new ParagraphConverter()
         this.tableConverter = new TableConverter()
+        this.footnoteConverter = new FootnoteConverter()
     }
 
     /**
@@ -96,18 +97,15 @@ export class DocxParser extends BaseParser {
     async parse(file: File | Blob | ArrayBuffer): Promise<ParsedDocument> {
         try {
             this.zip = await JSZip.loadAsync(file)
-            
+
             if (!this.zip) {
                 throw new Error('Failed to load DOCX file')
             }
-            
+
             this.imageParser.setZip(this.zip)
 
             // Сначала загружаем критически важные компоненты
-            await Promise.all([
-                this.loadStyles(),
-                this.loadRelationships()
-            ])
+            await Promise.all([this.loadStyles(), this.loadRelationships()])
 
             // Затем загружаем нумерацию, которая зависит от стилей
             await this.loadNumbering()
@@ -118,7 +116,7 @@ export class DocxParser extends BaseParser {
                 this.loadHeadersAndFooters(),
                 this.loadComments(),
                 this.loadFonts(),
-                this.loadNotes()
+                this.loadNotes(),
             ])
 
             // Проверяем наличие обязательных частей
@@ -170,7 +168,9 @@ export class DocxParser extends BaseParser {
         try {
             const file = this.zip.file('word/document.xml')
             if (!file) {
-                console.error('Main document content not found (word/document.xml)')
+                console.error(
+                    'Main document content not found (word/document.xml)',
+                )
                 throw new Error('Main document content not found')
             }
 
@@ -180,16 +180,13 @@ export class DocxParser extends BaseParser {
                 throw new Error('Main document is empty')
             }
 
-            console.log(content, 'DOCX content');
-            
-
             const document = await this.documentParser.parse(content)
 
             if (!document || !document.body) {
                 console.error('Failed to parse document content')
                 throw new Error('Failed to parse document content')
             }
-            
+
             return document
         } catch (error) {
             console.error('Error loading document:', error)
@@ -231,7 +228,7 @@ export class DocxParser extends BaseParser {
             }
 
             const content = await file.async('text')
-            
+
             if (!content) {
                 console.warn('Numbering file is empty')
                 this.numbering = new Map()
@@ -249,16 +246,19 @@ export class DocxParser extends BaseParser {
             // Проверяем корректность определений нумерации
             let validDefinitions = 0
             for (const [id, def] of this.numbering.entries()) {
-                if (!def || !def.levels || Object.keys(def.levels).length === 0) {
-                    console.warn(`Removing invalid numbering definition ${id}: no levels found`)
+                if (
+                    !def ||
+                    !def.levels ||
+                    Object.keys(def.levels).length === 0
+                ) {
+                    console.warn(
+                        `Removing invalid numbering definition ${id}: no levels found`,
+                    )
                     this.numbering.delete(id)
                 } else {
                     validDefinitions++
-                    console.log(`Numbering ${id} has ${Object.keys(def.levels).length} levels`)
                 }
             }
-
-            console.log(`Valid numbering definitions: ${validDefinitions}`)
         } catch (error) {
             console.error('Error loading numbering:', error)
             this.numbering = new Map()
@@ -293,7 +293,6 @@ export class DocxParser extends BaseParser {
             }
 
             this.images = await this.imageParser.parse(this.relationships)
-            console.log(`Successfully loaded ${this.images.size} images`)
         } catch (e) {
             console.error('Failed to load images:', e)
             this.images = new Map()
@@ -356,6 +355,7 @@ export class DocxParser extends BaseParser {
                 true,
             )
             this.footnotes = footnotes
+            console.log('Footnotes: ', this.footnotes)
         }
 
         // Загружаем концевые сноски
@@ -367,7 +367,8 @@ export class DocxParser extends BaseParser {
                 endnoteContent,
                 false,
             )
-            this.endnotes = endnotes
+            
+            this.endnotes = endnotes            
         }
     }
 
@@ -407,45 +408,99 @@ export class DocxParser extends BaseParser {
             for (const element of elements) {
                 try {
                     if (element.type === DomType.Paragraph) {
-                        const paragraphHtml = this.paragraphConverter.convertParagraphToHtml(
-                            element,
-                            this.styles,
-                            this.numbering,
-                            this.relationships,
-                        )
-                        
+                        const paragraphHtml =
+                            this.paragraphConverter.convertParagraphToHtml(
+                                element,
+                                this.styles,
+                                this.numbering,
+                                this.relationships,
+                            )
+
                         // Добавляем параграф на текущую страницу
                         pages[currentPage].push(paragraphHtml)
-                        
+
                         // Если обнаружен разрыв страницы, создаем новую страницу
                         if (this.paragraphConverter.hasPageBreakDetected()) {
                             currentPage++
                             pages[currentPage] = []
                         }
                     } else if (element.type === DomType.Table) {
-                        const tableHtml = await this.tableConverter.convertTableToHtml(
-                            element,
-                            this.styles,
-                            this.numbering,
-                        )
-                        
+                        const tableHtml =
+                            await this.tableConverter.convertTableToHtml(
+                                element,
+                                this.styles,
+                                this.numbering,
+                            )
+
                         // Добавляем таблицу на текущую страницу
                         pages[currentPage].push(tableHtml)
                     }
                 } catch (error) {
-                    console.error('Error converting element to HTML:', error, element)
+                    console.error(
+                        'Error converting element to HTML:',
+                        error,
+                        element,
+                    )
                     // Продолжаем конвертировать другие элементы
                 }
             }
 
-            // Создаем HTML для каждой страницы
-            const pagesHtml = pages.map(page => {
-                if (page.length === 0) return ''; // Пропускаем пустые страницы
-                return `<div class="a4-page">${page.join('\n')}</div>`;
-            }).filter(html => html !== ''); // Фильтруем пустые страницы
-            
-            // Оборачиваем все страницы в контейнер
-            return `<div class="a4-pages-container">${pagesHtml.join('\n')}</div>`;
+            // Получаем информацию о секциях документа
+            const sections = this.documentParser.getSections()
+
+            // Конвертируем сноски в HTML
+            const footnotesHtml = this.footnotes.size > 0 
+                ? this.footnoteConverter.convertFootnotesToHtml(
+                    this.footnotes,
+                    this.styles,
+                    this.numbering
+                  )
+                : '';
+
+            // Создаем HTML для каждой страницы с учетом ориентации
+            const pagesHtml = pages
+                .map((page, index) => {
+                    if (page.length === 0) return '' // Пропускаем пустые страницы
+
+                    // Определяем ориентацию страницы на основе секций
+                    // По умолчанию используем портретную ориентацию
+                    let orientation = 'portrait'
+
+                    // Если есть секции, проверяем их ориентацию
+                    if (sections && sections.length > 0) {
+                        // Используем секцию, соответствующую текущей странице
+                        // Если секций меньше, чем страниц, используем последнюю секцию
+                        const sectionIndex = Math.min(
+                            index,
+                            sections.length - 1,
+                        )
+                        const section = sections[sectionIndex]
+
+                        // Проверяем ориентацию секции
+                        if (
+                            section.pageSize &&
+                            section.pageSize.orientation === 'landscape'
+                        ) {
+                            orientation = 'landscape'
+                        }
+                    }
+
+                    // Добавляем класс ориентации к странице
+                    const orientationClass =
+                        orientation === 'landscape' ? ' landscape' : ''
+
+                    // Создаем страницу с контентом
+                    return `<div class="a4-page${orientationClass}">${page.join('\n')}</div>`
+                })
+                .filter((html) => html !== '') // Фильтруем пустые страницы
+
+            // Добавляем скрытый контейнер с сносками, который будет использоваться для клонирования
+            const hiddenFootnotes = footnotesHtml 
+                ? `<div style="display: none;">${footnotesHtml}</div>` 
+                : '';
+
+            // Оборачиваем все страницы в контейнер и добавляем скрытые сноски
+            return `<div class="a4-pages-container">${pagesHtml.join('\n')}${hiddenFootnotes}</div>`
         } catch (error) {
             console.error('Error in convertToHtml:', error)
             return ''

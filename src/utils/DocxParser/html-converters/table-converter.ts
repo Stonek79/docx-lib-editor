@@ -33,10 +33,12 @@ export class TableConverter {
         const tableHtml: string[] = []
 
         // Добавляем стили
-        const tableClasses = ['table']
+        const tableClasses = ['table', 'non-breakable']
         if (table.properties?.style) {
             tableClasses.push(`style-${table.properties.style}`)
         }
+        
+        console.log('Конвертируем таблицу:', table);
 
         // Обрабатываем строки
         for (const row of rows) {

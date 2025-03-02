@@ -90,7 +90,8 @@ export class RunParser extends BaseParser implements DocumentElementParser {
         // Обрабатываем сноски
         if (run['w:footnoteReference']) {
             const id = run['w:footnoteReference']['@_w:id']
-            elements.push(this.createTextNode(`[${id}]`))
+            // Создаем текстовый узел с параметрами сноски            
+            elements.push(this.createTextNode(id, true, id))            
         }
 
         if (run['w:sym']) {
@@ -112,13 +113,26 @@ export class RunParser extends BaseParser implements DocumentElementParser {
     /**
      * Создает текстовый узел
      * @param text - Текст узла
+     * @param isFootnoteRef - Является ли ссылкой на сноску
+     * @param footnoteId - Идентификатор сноски
      * @returns Текстовый узел
      */
-    protected override createTextNode(text: string): WmlText {
+    protected override createTextNode(text: string, isFootnoteRef?: boolean, footnoteId?: string): WmlText {
+        if (isFootnoteRef && footnoteId) {
+            return {
+                type: DomType.Text,
+                text: `${footnoteId}`,
+                isFootnoteRef,
+                footnoteId
+            };
+        }
+        
         return {
             type: DomType.Text,
             text,
-        }
+            isFootnoteRef,
+            footnoteId
+        };
     }
 
     /**

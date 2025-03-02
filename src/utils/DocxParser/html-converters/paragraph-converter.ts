@@ -271,11 +271,6 @@ export class ParagraphConverter {
      */
     private convertRunToHtml(run: WmlRun | WmlText): string {
         try {
-            if ('text' in run) {
-                // Сохраняем пробелы и экранируем HTML
-                return this.preserveWhitespace(run.text)
-            }
-
             // Получаем стиль прогона
             const style = run.properties || {}
 
@@ -287,10 +282,6 @@ export class ParagraphConverter {
                 styleAttributes.push('text-decoration: underline')
             if (style.strike)
                 styleAttributes.push('text-decoration: line-through')
-            if (style.vertAlign === 'superscript')
-                styleAttributes.push('vertical-align: super')
-            if (style.vertAlign === 'subscript')
-                styleAttributes.push('vertical-align: sub')
             if (style.color) styleAttributes.push(`color: #${style.color}`)
             if (style.highlight)
                 styleAttributes.push(`background-color: #${style.highlight}`)
@@ -304,20 +295,31 @@ export class ParagraphConverter {
 
             // Обрабатываем текстовый прогон
             let content = ''
-            for (const child of run.content) {
-                if ('text' in child) {
-                    content += `<span${styleString}>${this.preserveWhitespace(child.text)}</span>`
-                } else if ('char' in child) {
-                    content += `<span${styleString}>${child.char}</span>`
-                } else if ('breakType' in child) {
-                    // Обрабатываем разрывы страниц и строк
-                    if (child.breakType === 'page') {
-                        this.hasPageBreak = true
-                        content += '<span class="page-break"></span>'
-                    } else if (child.breakType === 'line') {
-                        content += '<br>'
-                    } else if (child.breakType === 'column') {
-                        content += '<span class="column-break"></span>'
+            if ('content' in run) {
+                for (const child of run.content) {
+                    if ('text' in child) {
+                        if (
+                            'isFootnoteRef' in child &&
+                            child.isFootnoteRef &&
+                            'footnoteId' in child &&
+                            child.footnoteId
+                        ) {
+                            content += `<a href="#footnote-${child.footnoteId}" class="footnote-ref" id="footnote-ref-${child.footnoteId}">${child.footnoteId}</a>`
+                        } else {
+                            content += `<span${styleString}>${this.preserveWhitespace(child.text)}</span>`
+                        }
+                    } else if ('char' in child) {
+                        content += `<span${styleString}>${child.char}</span>`
+                    } else if ('breakType' in child) {
+                        // Обрабатываем разрывы страниц и строк
+                        if (child.breakType === 'page') {
+                            this.hasPageBreak = true
+                            content += '<span class="page-break"></span>'
+                        } else if (child.breakType === 'line') {
+                            content += '<br>'
+                        } else if (child.breakType === 'column') {
+                            content += '<span class="column-break"></span>'
+                        }
                     }
                 }
             }
@@ -439,13 +441,13 @@ export class ParagraphConverter {
         }
 
         // Добавляем вертикальное выравнивание
-        if (runStyle.vertAlign) {
-            if (runStyle.vertAlign === 'superscript') {
-                inlineStyles.push('vertical-align: super')
-            } else if (runStyle.vertAlign === 'subscript') {
-                inlineStyles.push('vertical-align: sub')
-            }
-        }
+        // if (runStyle.vertAlign) {
+        //     if (runStyle.vertAlign === 'superscript') {
+        //         inlineStyles.push('vertical-align: super')
+        //     } else if (runStyle.vertAlign === 'subscript') {
+        //         inlineStyles.push('vertical-align: sub')
+        //     }
+        // }
 
         // Добавляем цвет
         if (runStyle.color) {

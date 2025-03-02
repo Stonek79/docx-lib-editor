@@ -7,29 +7,33 @@
  */
 interface PageBreakerOptions {
     /** Максимальная высота содержимого на странице в пикселях */
-    maxContentHeight?: number;
+    maxContentHeight?: number
+    /** Максимальная высота содержимого на странице в альбомной ориентации в пикселях */
+    maxLandscapeContentHeight?: number
     /** Селектор контейнера страниц */
-    pagesContainerSelector?: string;
+    pagesContainerSelector?: string
     /** Селектор страницы */
-    pageSelector?: string;
+    pageSelector?: string
     /** Селектор для элементов, которые нельзя разбивать между страницами */
-    nonBreakableSelector?: string;
+    nonBreakableSelector?: string
     /** Селектор для элементов, которые могут быть разбиты между страницами */
-    breakableSelector?: string;
+    breakableSelector?: string
     /** Отступы страницы в пикселях */
-    pagePadding?: number;
+    pagePadding?: number
     /** Включить колонтитулы */
-    enableHeaders?: boolean;
+    enableHeaders?: boolean
     /** Включить нижние колонтитулы */
-    enableFooters?: boolean;
+    enableFooters?: boolean
     /** HTML для верхнего колонтитула */
-    headerHtml?: string;
+    headerHtml?: string
     /** HTML для нижнего колонтитула */
-    footerHtml?: string;
+    footerHtml?: string
     /** Функция для генерации HTML верхнего колонтитула для конкретной страницы */
-    headerGenerator?: (pageNumber: number, totalPages: number) => string;
+    headerGenerator?: (pageNumber: number, totalPages: number) => string
     /** Функция для генерации HTML нижнего колонтитула для конкретной страницы */
-    footerGenerator?: (pageNumber: number, totalPages: number) => string;
+    footerGenerator?: (pageNumber: number, totalPages: number) => string
+    /** Массив с ориентацией страниц ('portrait' или 'landscape') */
+    pageOrientations?: ('portrait' | 'landscape')[]
 }
 
 /**
@@ -43,19 +47,19 @@ enum BreakType {
     /** Разрыв после элемента */
     AFTER = 'after',
     /** Разрыв внутри элемента */
-    INSIDE = 'inside'
+    INSIDE = 'inside',
 }
 
 /**
  * Класс для автоматического разбиения содержимого на страницы формата A4
  */
 export class PageBreaker {
-    private options: Required<PageBreakerOptions>;
-    private container: HTMLElement | null = null;
-    private pages: HTMLElement[] = [];
-    private contentElements: HTMLElement[] = [];
-    private totalPages: number = 0;
-    
+    private options: Required<PageBreakerOptions>
+    private container: HTMLElement | null = null
+    private pages: HTMLElement[] = []
+    private contentElements: HTMLElement[] = []
+    private totalPages: number = 0
+
     /**
      * Конструктор PageBreaker
      * @param options - Настройки разбивки на страницы
@@ -64,382 +68,544 @@ export class PageBreaker {
         // Значения по умолчанию
         this.options = {
             maxContentHeight: 257 * 3.78, // 257mm (A4 высота - отступы) в пикселях при 96 dpi
+            maxLandscapeContentHeight: 170 * 3.78, // 170mm (A4 ширина - отступы) в пикселях
             pagesContainerSelector: '.a4-pages-container',
             pageSelector: '.a4-page',
             nonBreakableSelector: 'table, figure, img, .non-breakable',
-            breakableSelector: 'p, div:not(.non-breakable), h1, h2, h3, h4, h5, h6',
+            breakableSelector:
+                'p, div:not(.non-breakable), h1, h2, h3, h4, h5, h6',
             pagePadding: 20 * 3.78, // 20mm в пикселях
             enableHeaders: false,
             enableFooters: false,
             headerHtml: '',
             footerHtml: '',
-            headerGenerator: (pageNumber, totalPages) => `<div class="header-content">Страница ${pageNumber} из ${totalPages}</div>`,
-            footerGenerator: (pageNumber, totalPages) => `<div class="footer-content">Страница ${pageNumber} из ${totalPages}</div>`,
-            ...options
-        };
+            headerGenerator: (pageNumber, totalPages) =>
+                `<div class="header-content">Страница ${pageNumber} из ${totalPages}</div>`,
+            footerGenerator: (pageNumber, totalPages) =>
+                `<div class="footer-content">Страница ${pageNumber} из ${totalPages}</div>`,
+            pageOrientations: [],
+            ...options,
+        }
     }
-    
+
     /**
      * Инициализирует разбивку на страницы
      * @param containerElement - Элемент контейнера страниц
      */
     public init(containerElement?: HTMLElement): void {
         // Находим контейнер страниц
-        this.container = containerElement || document.querySelector(this.options.pagesContainerSelector);
-        
+        this.container =
+            containerElement ||
+            document.querySelector(this.options.pagesContainerSelector)
+
         if (!this.container) {
-            console.error('PageBreaker: Container element not found');
-            return;
+            console.error('PageBreaker: Container element not found')
+            return
         }
-        
+
         // Находим все страницы
-        this.pages = Array.from(this.container.querySelectorAll(this.options.pageSelector)) as HTMLElement[];
-        
+        this.pages = Array.from(
+            this.container.querySelectorAll(this.options.pageSelector),
+        ) as HTMLElement[]
+
+        // Определяем ориентацию страниц на основе классов
+        this.options.pageOrientations = this.pages.map((page) =>
+            page.classList.contains('landscape') ? 'landscape' : 'portrait',
+        )
+
         if (this.pages.length === 0) {
-            console.error('PageBreaker: No pages found');
-            return;
+            console.error('PageBreaker: No pages found')
+            return
         }
-        
+
         // Собираем все элементы содержимого со всех страниц
-        this.collectContentElements();
-        
+        this.collectContentElements()
+
         // Разбиваем содержимое на страницы
-        this.breakIntoPages();
-        
+        this.breakIntoPages()
+
         // Добавляем колонтитулы, если они включены
-        this.addHeadersAndFooters();
+        this.addHeadersAndFooters()
     }
-    
+
     /**
      * Собирает все элементы содержимого со всех страниц
      */
     private collectContentElements(): void {
-        this.contentElements = [];
-        
+        this.contentElements = []
+
         // Проходим по всем страницам и собираем их содержимое
         for (const page of this.pages) {
             // Исключаем колонтитулы из сбора
-            const headerElements = Array.from(page.querySelectorAll('.header'));
-            const footerElements = Array.from(page.querySelectorAll('.footer'));
-            
-            const children = Array.from(page.children) as HTMLElement[];
-            const contentChildren = children.filter(child => 
-                !headerElements.includes(child) && !footerElements.includes(child)
-            );
-            
-            this.contentElements.push(...contentChildren);
-            
+            const headerElements = Array.from(page.querySelectorAll('.header'))
+            const footerElements = Array.from(page.querySelectorAll('.footer'))
+
+            const children = Array.from(page.children) as HTMLElement[]
+            const contentChildren = children.filter(
+                (child) =>
+                    !headerElements.includes(child) &&
+                    !footerElements.includes(child),
+            )
+
+            this.contentElements.push(...contentChildren)
+
             // Очищаем страницу
-            page.innerHTML = '';
+            page.innerHTML = ''
         }
-        
+
         // Оставляем только первую страницу, остальные удаляем
-        const firstPage = this.pages[0];
-        this.pages = [firstPage];
-        
+        const firstPage = this.pages[0]
+        this.pages = [firstPage]
+
         // Удаляем все страницы из контейнера, кроме первой
         while (this.container!.children.length > 1) {
-            this.container!.removeChild(this.container!.lastChild!);
+            this.container!.removeChild(this.container!.lastChild!)
         }
     }
-    
+
     /**
      * Разбивает содержимое на страницы
      */
     private breakIntoPages(): void {
-        let currentPage = this.pages[0];
-        let currentPageHeight = 0;
-        
+        let currentPage = this.pages[0]
+        let currentPageHeight = 0
+        let currentPageIndex = 0
+
+        // Устанавливаем ориентацию первой страницы
+        if (
+            this.options.pageOrientations &&
+            this.options.pageOrientations.length > 0
+        ) {
+            const orientation = this.options.pageOrientations[0]
+            if (orientation === 'landscape') {
+                currentPage.classList.add('landscape')
+            }
+        }
+
         // Проходим по всем элементам содержимого
         for (let i = 0; i < this.contentElements.length; i++) {
-            const element = this.contentElements[i];
-            
+            const element = this.contentElements[i]
+
             // Проверяем, есть ли у элемента класс page-break-before
             if (element.classList.contains('page-break-before')) {
                 // Создаем новую страницу
-                currentPage = this.createNewPage();
-                currentPageHeight = 0;
+                currentPage = this.createNewPage()
+                currentPageHeight = 0
             }
-            
+
             // Клонируем элемент, чтобы измерить его высоту
-            const clone = element.cloneNode(true) as HTMLElement;
-            currentPage.appendChild(clone);
-            
+            const clone = element.cloneNode(true) as HTMLElement
+            currentPage.appendChild(clone)
+
             // Проверяем, вмещается ли элемент на текущую страницу
-            const elementHeight = clone.offsetHeight;
-            
+            const elementHeight = clone.offsetHeight
+
             // Проверяем, не является ли элемент неразрывным
-            const isNonBreakable = element.matches(this.options.nonBreakableSelector);
-            const isBreakable = element.matches(this.options.breakableSelector);
-            
+            const isNonBreakable = element.matches(
+                this.options.nonBreakableSelector,
+            )
+            const isBreakable = element.matches(this.options.breakableSelector)
+            // Определяем максимальную высоту в зависимости от ориентации
+            const maxHeight = currentPage.classList.contains('landscape')
+                ? this.options.maxLandscapeContentHeight
+                : this.options.maxContentHeight
+
             // Если элемент не вмещается на текущую страницу
-            if (currentPageHeight + elementHeight > this.options.maxContentHeight) {
+            if (currentPageHeight + elementHeight > maxHeight) {
                 // Если элемент неразрывный, то переносим его на новую страницу
                 if (isNonBreakable) {
                     // Удаляем клон с текущей страницы
-                    currentPage.removeChild(clone);
-                    
+                    currentPage.removeChild(clone)
+
                     // Создаем новую страницу
-                    currentPage = this.createNewPage();
-                    currentPageHeight = 0;
-                    
+                    currentPage = this.createNewPage()
+                    currentPageHeight = 0
+
                     // Добавляем элемент на новую страницу
-                    currentPage.appendChild(element);
-                    currentPageHeight += elementHeight;
-                } else if (isBreakable && element.tagName.toLowerCase() === 'p') {
+                    currentPage.appendChild(element)
+                    currentPageHeight += elementHeight
+                } else if (
+                    isBreakable &&
+                    element.tagName.toLowerCase() === 'p'
+                ) {
                     // Если это параграф, который можно разбить
                     // Удаляем клон с текущей страницы
-                    currentPage.removeChild(clone);
-                    
+                    currentPage.removeChild(clone)
+
                     // Разбиваем параграф между страницами
                     const { firstPart, secondPart } = this.splitParagraph(
-                        element, 
-                        this.options.maxContentHeight - currentPageHeight
-                    );
-                    
+                        element,
+                        this.options.maxContentHeight - currentPageHeight,
+                    )
+
                     // Добавляем первую часть на текущую страницу
                     if (firstPart) {
-                        currentPage.appendChild(firstPart);
+                        currentPage.appendChild(firstPart)
                         // Не обновляем currentPageHeight, так как мы переходим на новую страницу
                     }
-                    
+
                     // Создаем новую страницу
-                    currentPage = this.createNewPage();
-                    currentPageHeight = 0;
-                    
+                    currentPage = this.createNewPage()
+                    currentPageHeight = 0
+
                     // Добавляем вторую часть на новую страницу
                     if (secondPart) {
-                        currentPage.appendChild(secondPart);
-                        currentPageHeight += secondPart.offsetHeight;
+                        currentPage.appendChild(secondPart)
+                        currentPageHeight += secondPart.offsetHeight
                     }
                 } else {
                     // Если элемент можно разбить, но это не параграф
                     // Удаляем клон с текущей страницы
-                    currentPage.removeChild(clone);
-                    
+                    currentPage.removeChild(clone)
+
                     // Создаем новую страницу
-                    currentPage = this.createNewPage();
-                    currentPageHeight = 0;
-                    
+                    currentPage = this.createNewPage()
+                    currentPageHeight = 0
+
                     // Добавляем элемент на новую страницу
-                    currentPage.appendChild(element);
-                    currentPageHeight += elementHeight;
+                    currentPage.appendChild(element)
+                    currentPageHeight += elementHeight
                 }
             } else {
                 // Если элемент вмещается на текущую страницу
                 // Удаляем клон и добавляем оригинальный элемент
-                currentPage.removeChild(clone);
-                currentPage.appendChild(element);
-                currentPageHeight += elementHeight;
-                
+                currentPage.removeChild(clone)
+                currentPage.appendChild(element)
+                currentPageHeight += elementHeight
+
                 // Проверяем, есть ли у элемента класс page-break-after
                 if (element.classList.contains('page-break-after')) {
                     // Создаем новую страницу для следующего элемента
-                    currentPage = this.createNewPage();
-                    currentPageHeight = 0;
+                    currentPage = this.createNewPage()
+                    currentPageHeight = 0
                 }
             }
         }
-        
+
+        this.distributeFootnotes()
+
         // Сохраняем общее количество страниц
-        this.totalPages = this.pages.length;
+        this.totalPages = this.pages.length
     }
-    
+
+    /**
+     * Распределяет сноски по страницам
+     */
+    private distributeFootnotes(): void {
+        // Удаляем оригинальный контейнер сносок из документа
+        const originalFootnotesContainers = document.querySelectorAll('.footnotes-container')
+        originalFootnotesContainers.forEach(container => {
+            if (container.parentNode && !this.pages.includes(container.parentNode as HTMLElement)) {
+                container.parentNode.removeChild(container)
+            }
+        })
+        
+
+        // Проходим по всем страницам
+        for (let i = 0; i < this.pages.length; i++) {
+            const page = this.pages[i]
+
+            // Удаляем существующие контейнеры сносок на странице
+            const existingContainers = page.querySelectorAll('.footnotes-container')
+            existingContainers.forEach(container => {
+                page.removeChild(container)
+            })
+
+            // Находим все ссылки на сноски на странице
+            const footnoteRefs = Array.from(
+                page.querySelectorAll('.footnote-ref'),
+            )
+            
+            if (footnoteRefs.length === 0) continue
+
+            // Создаем контейнер для сносок
+            let footnotesContainer = document.createElement('div')
+            footnotesContainer.className = 'footnotes-container'
+            
+            // Добавляем разделитель
+            const separator = document.createElement('hr')
+            separator.className = 'footnotes-separator'
+            footnotesContainer.appendChild(separator)
+            
+            // Создаем список сносок
+            const footnotesList = document.createElement('div')
+            footnotesList.className = 'footnotes-list'
+            footnotesContainer.appendChild(footnotesList)
+            
+            // Массив для отслеживания добавленных сносок
+            const addedFootnoteIds = new Set<string>()
+            
+            // Для каждой ссылки на сноску
+            for (const ref of footnoteRefs) {
+                const href = ref.getAttribute('href')
+                if (href) {
+                    // Находим ID сноски
+                    const footnoteId = href.replace('#footnote-', '')
+                    
+                    // Проверяем, не добавляли ли мы уже эту сноску
+                    if (addedFootnoteIds.has(footnoteId)) continue
+                    
+                    // Находим сноску в документе
+                    const footnote = document.querySelector(
+                        `#footnote-${footnoteId}`,
+                    )
+                    if (footnote) {
+                        // Клонируем сноску
+                        const footnoteClone = footnote.cloneNode(
+                            true,
+                        ) as HTMLElement
+                        // Добавляем в список сносок на текущей странице
+                        footnotesList.appendChild(footnoteClone)
+                        // Добавляем ID в список добавленных
+                        addedFootnoteIds.add(footnoteId)
+                    }
+                }
+            }
+            
+            // Если есть сноски, добавляем контейнер на страницу
+            if (addedFootnoteIds.size > 0) {
+                page.appendChild(footnotesContainer)
+            }
+        }
+
+        // Удаляем оригинальный контейнер сносок из документа
+        const originalFootnotesContainer = document.querySelector(
+            '.footnotes-container',
+        )
+        if (
+            originalFootnotesContainer &&
+            originalFootnotesContainer.parentNode
+        ) {
+            originalFootnotesContainer.parentNode.removeChild(
+                originalFootnotesContainer,
+            )
+        }
+    }
+
     /**
      * Разбивает параграф на две части
      * @param paragraph - Параграф для разбивки
      * @param availableHeight - Доступная высота на текущей странице
      * @returns Объект с двумя частями параграфа
      */
-    private splitParagraph(paragraph: HTMLElement, availableHeight: number): { 
-        firstPart: HTMLElement | null; 
-        secondPart: HTMLElement | null; 
+    private splitParagraph(
+        paragraph: HTMLElement,
+        availableHeight: number,
+    ): {
+        firstPart: HTMLElement | null
+        secondPart: HTMLElement | null
     } {
         // Создаем контейнер для тестирования
-        const testContainer = document.createElement('div');
-        testContainer.style.visibility = 'hidden';
-        testContainer.style.position = 'absolute';
-        testContainer.style.width = `${paragraph.offsetWidth}px`;
-        document.body.appendChild(testContainer);
-        
+        const testContainer = document.createElement('div')
+        testContainer.style.visibility = 'hidden'
+        testContainer.style.position = 'absolute'
+        testContainer.style.width = `${paragraph.offsetWidth}px`
+        document.body.appendChild(testContainer)
+
         // Клонируем параграф для тестирования
-        const clone = paragraph.cloneNode(true) as HTMLElement;
-        testContainer.appendChild(clone);
-        
+        const clone = paragraph.cloneNode(true) as HTMLElement
+        testContainer.appendChild(clone)
+
         // Получаем текстовое содержимое параграфа
-        const text = paragraph.textContent || '';
-        const words = text.split(' ');
-        
+        const text = paragraph.textContent || ''
+        const words = text.split(' ')
+
         // Если параграф содержит только одно слово, не разбиваем его
         if (words.length <= 1) {
-            document.body.removeChild(testContainer);
-            return { firstPart: null, secondPart: paragraph };
+            document.body.removeChild(testContainer)
+            return { firstPart: null, secondPart: paragraph }
         }
-        
+
         // Бинарный поиск для определения точки разбивки
-        let left = 0;
-        let right = words.length - 1;
-        let splitIndex = 0;
-        
+        let left = 0
+        let right = words.length - 1
+        let splitIndex = 0
+
         while (left <= right) {
-            const mid = Math.floor((left + right) / 2);
-            
+            const mid = Math.floor((left + right) / 2)
+
             // Устанавливаем текст для клона
-            clone.textContent = words.slice(0, mid + 1).join(' ');
-            
+            clone.textContent = words.slice(0, mid + 1).join(' ')
+
             // Проверяем высоту
             if (clone.offsetHeight <= availableHeight) {
-                splitIndex = mid;
-                left = mid + 1;
+                splitIndex = mid
+                left = mid + 1
             } else {
-                right = mid - 1;
+                right = mid - 1
             }
         }
-        
+
         // Если не удалось найти точку разбивки, не разбиваем параграф
         if (splitIndex === 0) {
-            document.body.removeChild(testContainer);
-            return { firstPart: null, secondPart: paragraph };
+            document.body.removeChild(testContainer)
+            return { firstPart: null, secondPart: paragraph }
         }
-        
+
         // Создаем две части параграфа
-        const firstPart = paragraph.cloneNode() as HTMLElement;
-        firstPart.textContent = words.slice(0, splitIndex + 1).join(' ');
-        
-        const secondPart = paragraph.cloneNode() as HTMLElement;
-        secondPart.textContent = words.slice(splitIndex + 1).join(' ');
-        
+        const firstPart = paragraph.cloneNode() as HTMLElement
+        firstPart.textContent = words.slice(0, splitIndex + 1).join(' ')
+
+        const secondPart = paragraph.cloneNode() as HTMLElement
+        secondPart.textContent = words.slice(splitIndex + 1).join(' ')
+
         // Копируем классы и стили
-        firstPart.className = paragraph.className;
-        secondPart.className = paragraph.className;
-        
+        firstPart.className = paragraph.className
+        secondPart.className = paragraph.className
+
         // Удаляем тестовый контейнер
-        document.body.removeChild(testContainer);
-        
-        return { firstPart, secondPart };
+        document.body.removeChild(testContainer)
+
+        return { firstPart, secondPart }
     }
-    
+
     /**
      * Создает новую страницу
      * @returns Новая страница
      */
     private createNewPage(): HTMLElement {
         // Создаем новую страницу
-        const newPage = document.createElement('div');
-        newPage.className = 'a4-page';
-        
+        const newPage = document.createElement('div')
+        newPage.className = 'a4-page'
+
+        // Устанавливаем ориентацию для новой страницы
+        // Используем ориентацию последней страницы или 'portrait' по умолчанию
+        if (this.pages.length > 0) {
+            const lastPage = this.pages[this.pages.length - 1]
+            if (lastPage.classList.contains('landscape')) {
+                newPage.classList.add('landscape')
+            }
+        } else if (
+            this.options.pageOrientations.length > 0 &&
+            this.options.pageOrientations[0] === 'landscape'
+        ) {
+            newPage.classList.add('landscape')
+        }
+
         // Добавляем страницу в контейнер
-        this.container!.appendChild(newPage);
-        
+        this.container!.appendChild(newPage)
+
         // Добавляем страницу в массив страниц
-        this.pages.push(newPage);
-        
-        return newPage;
+        this.pages.push(newPage)
+
+        return newPage
     }
-    
+
     /**
      * Добавляет колонтитулы на все страницы
      */
     private addHeadersAndFooters(): void {
         if (!this.options.enableHeaders && !this.options.enableFooters) {
-            return;
+            return
         }
-        
-        const totalPages = this.pages.length;
-        
+
+        const totalPages = this.pages.length
+
         for (let i = 0; i < totalPages; i++) {
-            const page = this.pages[i];
-            const pageNumber = i + 1;
-            
+            const page = this.pages[i]
+            const pageNumber = i + 1
+
             // Добавляем верхний колонтитул
             if (this.options.enableHeaders) {
-                const header = document.createElement('div');
-                header.className = 'header';
-                
+                const header = document.createElement('div')
+                header.className = 'header'
+
                 // Используем генератор или статический HTML
                 if (this.options.headerGenerator) {
-                    header.innerHTML = this.options.headerGenerator(pageNumber, totalPages);
+                    header.innerHTML = this.options.headerGenerator(
+                        pageNumber,
+                        totalPages,
+                    )
                 } else {
-                    header.innerHTML = this.options.headerHtml;
+                    header.innerHTML = this.options.headerHtml
                 }
-                
+
                 // Вставляем колонтитул в начало страницы
-                page.insertBefore(header, page.firstChild);
+                page.insertBefore(header, page.firstChild)
             }
-            
+
             // Добавляем нижний колонтитул
             if (this.options.enableFooters) {
-                const footer = document.createElement('div');
-                footer.className = 'footer';
-                
+                const footer = document.createElement('div')
+                footer.className = 'footer'
+
                 // Используем генератор или статический HTML
                 if (this.options.footerGenerator) {
-                    footer.innerHTML = this.options.footerGenerator(pageNumber, totalPages);
+                    footer.innerHTML = this.options.footerGenerator(
+                        pageNumber,
+                        totalPages,
+                    )
                 } else {
-                    footer.innerHTML = this.options.footerHtml;
+                    footer.innerHTML = this.options.footerHtml
                 }
-                
+
                 // Добавляем колонтитул в конец страницы
-                page.appendChild(footer);
+                page.appendChild(footer)
             }
         }
     }
-    
+
     /**
      * Обновляет разбивку на страницы
      */
     public update(): void {
         if (!this.container) {
-            console.error('PageBreaker: Container element not found');
-            return;
+            console.error('PageBreaker: Container element not found')
+            return
         }
-        
+
         // Собираем все элементы содержимого заново
-        this.collectContentElements();
-        
+        this.collectContentElements()
+
         // Разбиваем содержимое на страницы
-        this.breakIntoPages();
-        
+        this.breakIntoPages()
+
         // Добавляем колонтитулы, если они включены
-        this.addHeadersAndFooters();
+        this.addHeadersAndFooters()
     }
-    
+
     /**
      * Получает общее количество страниц
      * @returns Общее количество страниц
      */
     public getTotalPages(): number {
-        return this.totalPages;
+        return this.totalPages
     }
-    
+
     /**
      * Включает или отключает колонтитулы
      * @param enableHeaders - Включить верхние колонтитулы
      * @param enableFooters - Включить нижние колонтитулы
      */
-    public setHeadersAndFooters(enableHeaders: boolean, enableFooters: boolean): void {
-        this.options.enableHeaders = enableHeaders;
-        this.options.enableFooters = enableFooters;
-        this.update();
+    public setHeadersAndFooters(
+        enableHeaders: boolean,
+        enableFooters: boolean,
+    ): void {
+        this.options.enableHeaders = enableHeaders
+        this.options.enableFooters = enableFooters
+        this.update()
     }
-    
+
     /**
      * Устанавливает HTML для колонтитулов
      * @param headerHtml - HTML для верхнего колонтитула
      * @param footerHtml - HTML для нижнего колонтитула
      */
-    public setHeaderAndFooterHtml(headerHtml?: string, footerHtml?: string): void {
+    public setHeaderAndFooterHtml(
+        headerHtml?: string,
+        footerHtml?: string,
+    ): void {
         if (headerHtml !== undefined) {
-            this.options.headerHtml = headerHtml;
+            this.options.headerHtml = headerHtml
         }
-        
+
         if (footerHtml !== undefined) {
-            this.options.footerHtml = footerHtml;
+            this.options.footerHtml = footerHtml
         }
-        
-        this.update();
+
+        this.update()
     }
-    
+
     /**
      * Устанавливает генераторы для колонтитулов
      * @param headerGenerator - Функция для генерации HTML верхнего колонтитула
@@ -447,17 +613,17 @@ export class PageBreaker {
      */
     public setHeaderAndFooterGenerators(
         headerGenerator?: (pageNumber: number, totalPages: number) => string,
-        footerGenerator?: (pageNumber: number, totalPages: number) => string
+        footerGenerator?: (pageNumber: number, totalPages: number) => string,
     ): void {
         if (headerGenerator !== undefined) {
-            this.options.headerGenerator = headerGenerator;
+            this.options.headerGenerator = headerGenerator
         }
-        
+
         if (footerGenerator !== undefined) {
-            this.options.footerGenerator = footerGenerator;
+            this.options.footerGenerator = footerGenerator
         }
-        
-        this.update();
+
+        this.update()
     }
 }
 
@@ -467,14 +633,14 @@ export class PageBreaker {
  * @returns Экземпляр PageBreaker
  */
 export function createPageBreaker(options?: PageBreakerOptions): PageBreaker {
-    const pageBreaker = new PageBreaker(options);
-    
+    const pageBreaker = new PageBreaker(options)
+
     // Инициализируем после загрузки DOM
     if (typeof window !== 'undefined') {
         window.addEventListener('DOMContentLoaded', () => {
-            pageBreaker.init();
-        });
+            pageBreaker.init()
+        })
     }
-    
-    return pageBreaker;
+
+    return pageBreaker
 }

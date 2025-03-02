@@ -29,6 +29,11 @@
     --a4-width: 210mm;
     --a4-height: 297mm;
     --a4-content-height: calc(var(--a4-height) - (var(--docx-page-margin) * 2));
+    
+    /* Размеры для альбомной ориентации */
+    --a4-landscape-width: 297mm;
+    --a4-landscape-height: 210mm;
+    --a4-landscape-content-height: calc(var(--a4-landscape-height) - (var(--docx-page-margin) * 2));
 }
 
 /* Базовые стили для A4 страницы */
@@ -36,7 +41,7 @@
     width: var(--a4-width);
     min-height: var(--a4-height);
     padding: var(--docx-page-margin);
-    margin: 10mm auto;
+    /* margin: 10mm auto; */
     background-color: var(--docx-background-color);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
@@ -45,6 +50,23 @@
     word-wrap: break-word;
     word-break: normal;
     /* hyphens: auto; */
+}
+
+.a4-pages-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10mm;
+    padding: 10mm 0;
+}
+
+/* Стили для страницы в альбомной ориентации */
+.a4-page.landscape {
+    width: var(--a4-landscape-width);
+    min-height: var(--a4-landscape-height);
+    transform-origin: top left;
+    transform: rotate(0deg); /* Убираем поворот, чтобы страница отображалась как альбомная */
+    margin: 10mm auto;
 }
 
 /* Общие правила для всех элементов внутри a4-page */
@@ -164,11 +186,77 @@
     padding-right: .3em;
 }
 
+/* Стили для сносок */
+/* Ссылки на сноски в основном тексте */
+.footnote-ref {
+    text-decoration: none;
+    color: inherit;
+    font-size: 0.7em;
+    line-height: 0;
+    position: relative;
+    top: -0.4em;
+    margin: 0 2px;
+}
+
+/* Контейнер для блока сносок */
+.footnotes-container {
+    margin-top: 20px;
+    padding-top: 10px;
+    font-size: 0.85em;
+    color: #333;
+    border-top: 1px solid #ccc;
+}
+
+/* Разделитель сносок (при необходимости) */
+.footnotes-separator {
+    display: none; /* Скрыт, так как граница уже в контейнере */
+}
+
+/* Список сносок */
+.footnotes-list {
+    padding-left: 20px;
+    margin-top: 10px;
+}
+
+/* Отдельная сноска */
+.footnote {
+    margin-bottom: 10px;
+    line-height: 1.4;
+    position: relative;
+}
+
+/* Номер сноски в списке */
+.footnote-number {
+    position: absolute;
+    left: -20px;
+    font-size: 0.8em;
+    font-weight: 500;
+    color: #666;
+}
+
+/* Ссылки внутри сносок */
+.footnote-ref[href^="#footnote-"] {
+    vertical-align: baseline;
+    font-size: inherit;
+    top: 0;
+    margin: 0 3px;
+    color: inherit;
+    font-size: 0.7em;
+    line-height: 0;
+    position: relative;
+    top: -0.4em;
+    margin: 0 2px;
+    text-decoration: none;
+}
 
 /* Улучшенные стили для таблиц */
 .a4-page table {
     border-collapse: collapse;
     width: 100%;
+    page-break-inside: avoid; /* Предотвращаем разрыв таблицы между страницами */
+    break-inside: avoid;
+    margin-bottom: 1em;
+    display: table;
 }
 
 .a4-page td,
@@ -236,33 +324,7 @@
     justify-content: space-between;
     align-items: center;
 }
-
-/* Стили для сносок */
-.a4-page .footnote-ref {
-    vertical-align: super;
-    font-size: 0.8em;
-    color: var(--docx-accent1-color);
-    text-decoration: none;
-}
-
-.a4-page .footnotes {
-    border-top: 1px solid #ccc;
-    margin-top: 20px;
-    padding-top: 10px;
-    font-size: 10pt;
-    color: var(--docx-accent3-color);
-}
-
-.a4-page .footnote {
-    display: flex;
-    margin-bottom: 5px;
-}
-
-.a4-page .footnote-number {
-    min-width: 20px;
-    font-weight: bold;
-}
-
+ 
 /* Контейнер для всех страниц A4 */
 .a4-pages-container {
     display: flex;

@@ -236,6 +236,13 @@ export interface WmlHeaderFooter extends OpenXmlElement {
     children: OpenXmlElement[]
 }
 
+export interface WmlText {
+    type: DomType.Text
+    text: string
+    isFootnoteRef?: boolean
+    footnoteId?: string
+}
+
 /**
  * Интерфейс для комментария в документе
  */
@@ -360,3 +367,4 @@ export interface IDomSubStyle {
     runProps?: Record<string, any>
     values?: Record<string, string | number>
 }
+

@@ -16,6 +16,7 @@ import { HyperlinkParser } from './hyperlink/hyperlink-parser'
 import { DrawingParser } from './drawing/drawing-parser'
 import { FieldParser } from './field/field-parser'
 import { Relationship } from '@/types/relationships'
+import { SectionProperties, SectionPropertiesParser } from './section-properties-parser'
 
 /**
  * Парсер основного содержимого DOCX документа.
@@ -31,7 +32,9 @@ export class DocumentParser extends BaseParser {
     private hyperlinkParser: HyperlinkParser
     private drawingParser: DrawingParser
     private fieldParser: FieldParser
+    private sectionPropertiesParser: SectionPropertiesParser
     private relationships: Map<string, Relationship> = new Map()
+    private sections: SectionProperties[] = []
 
     constructor(options = {}) {
         super(options)
@@ -45,6 +48,7 @@ export class DocumentParser extends BaseParser {
         this.hyperlinkParser = new HyperlinkParser()
         this.drawingParser = new DrawingParser()
         this.fieldParser = new FieldParser()
+        this.sectionPropertiesParser = new SectionPropertiesParser()
     }
 
     /**
@@ -64,6 +68,9 @@ export class DocumentParser extends BaseParser {
         const doc = this.xmlParser.parse(xmlContent)
         console.log('Исходный XML документ:', doc?.['w:document']?.['w:body'])
 
+        // Парсим секции документа
+        this.parseSections(doc?.['w:document']?.['w:body'])
+
         const content = this.parseDocumentElements(
             doc?.['w:document']?.['w:body'],
         )
@@ -82,6 +89,49 @@ export class DocumentParser extends BaseParser {
         }
     }
 
+    /**
+     * Парсит секции документа
+     * @param body - Тело документа
+     */
+    private parseSections(body: any): void {
+        if (!body) return;
+        
+        // Очищаем предыдущие секции
+        this.sections = [];
+        
+        // Проверяем наличие свойств секции в конце документа
+        if (body['w:sectPr']) {
+            const sectionProps = this.sectionPropertiesParser.parseSectionProperties(body['w:sectPr']);
+            this.sections.push(sectionProps);
+        }
+        
+        // Проверяем свойства секций внутри параграфов
+        if (body['w:p']) {
+            const paragraphs = Array.isArray(body['w:p']) ? body['w:p'] : [body['w:p']];
+            
+            for (const paragraph of paragraphs) {
+                if (paragraph['w:pPr'] && paragraph['w:pPr']['w:sectPr']) {
+                    const sectionProps = this.sectionPropertiesParser.parseSectionProperties(paragraph['w:pPr']['w:sectPr']);
+                    this.sections.push(sectionProps);
+                }
+            }
+        }
+        
+        // Если не нашли ни одной секции, создаем секцию по умолчанию
+        if (this.sections.length === 0) {
+            const defaultSection = this.sectionPropertiesParser.getDefaultSectionProperties();
+            this.sections.push(defaultSection);
+        }
+    }
+    
+    /**
+     * Возвращает секции документа
+     * @returns Массив свойств секций
+     */
+    public getSections(): SectionProperties[] {
+        return this.sections;
+    }
+    
     /**
      * Парсит элементы документа
      * @param elements - XML элементы для парсинга
