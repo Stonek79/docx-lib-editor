@@ -27,7 +27,9 @@ export class TableParser extends BaseParser implements DocumentElementParser {
      * @returns true если элемент является таблицей (w:tbl)
      */
     canParse(element: any): boolean {
-        return 'w:tbl' in element
+        return (
+            'w:tbl' in element || 'w:tblGrid' in element || 'w:tblPr' in element
+        )
     }
 
     /**
@@ -37,11 +39,13 @@ export class TableParser extends BaseParser implements DocumentElementParser {
      */
     parse(element: any): WmlTable {
         const table = 'w:tbl' in element ? element['w:tbl'] : element
-        const properties = PropertiesParser.parseTableProperties(table['w:tblPr'])
+        const properties = PropertiesParser.parseTableProperties(
+            table['w:tblPr'],
+        )
         return {
             type: DomType.Table,
             rows: this.parseRows(table),
-            properties
+            properties,
         }
     }
 

@@ -12,11 +12,21 @@ import { ParagraphConverter } from './paragraph-converter'
  */
 export class TableConverter {
     private paragraphConverter: ParagraphConverter
+    private pageBreakDetected: boolean = false
 
     constructor() {
         this.paragraphConverter = new ParagraphConverter()
     }
 
+    /**
+     * Проверяет, был ли обнаружен разрыв страницы
+     * @returns true если был обнаружен разрыв страницы
+     */
+    hasPageBreakDetected(): boolean {
+        const result = this.pageBreakDetected
+        this.pageBreakDetected = false // Сбрасываем флаг
+        return result
+    }
     /**
      * Конвертирует таблицу в HTML
      * @param table - Таблица для конвертации
@@ -32,14 +42,15 @@ export class TableConverter {
         const rows = table.rows || []
         const tableHtml: string[] = []
 
+        // Сбрасываем флаг разрыва страницы
+        this.pageBreakDetected = false
+        
         // Добавляем стили
         const tableClasses = ['table', 'non-breakable']
         if (table.properties?.style) {
             tableClasses.push(`style-${table.properties.style}`)
         }
         
-        console.log('Конвертируем таблицу:', table);
-
         // Обрабатываем строки
         for (const row of rows) {
             const cells = row.cells || []
@@ -84,6 +95,11 @@ export class TableConverter {
             )
         }
 
+        // Проверяем наличие разрыва страницы после таблицы
+        if (table.properties?.pageBreakAfter) {
+            this.pageBreakDetected = true
+        }
+        
         return `<table class="${tableClasses.join(' ')}">${tableHtml.join('')}</table>`
     }
 }

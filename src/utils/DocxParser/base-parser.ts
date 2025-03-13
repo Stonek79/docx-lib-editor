@@ -36,23 +36,24 @@ export class BaseParser {
     constructor(options: ParserOptions = {}) {
         this.options = {
             ignoreWidth: false,
-            debug: false,
+            debug: true,
             ...options,
         }
 
         this.xmlParser = new XMLParser({
             ignoreAttributes: false,
             attributeNamePrefix: '@_',
-            parseAttributeValue: false,     // Не преобразовывать атрибуты в числа/булевы значения
-            numberParseOptions: {          // Настройки парсинга чисел
-                hex: false,                // Не парсить шестнадцатеричные числа
-                leadingZeros: false,       // Не парсить числа с ведущими нулями
-                eNotation: false           // Не парсить экспоненциальную запись
+            parseAttributeValue: false, // Не преобразовывать атрибуты в числа/булевы значения
+            numberParseOptions: {
+                // Настройки парсинга чисел
+                hex: false, // Не парсить шестнадцатеричные числа
+                leadingZeros: false, // Не парсить числа с ведущими нулями
+                eNotation: false, // Не парсить экспоненциальную запись
             },
             ignoreDeclaration: true,
             preserveOrder: false,
             trimValues: false,
-            alwaysCreateTextNode: true
+            alwaysCreateTextNode: false,
         })
     }
 
@@ -86,7 +87,11 @@ export class BaseParser {
      * @returns Объект WmlBreak с типом DomType.Break и типом разрыва
      * @description Используется для вставки разрывов строк или страниц в документ
      */
-    protected createBreakNode(breakType: 'page' | 'line' | 'column' = 'line'): WmlBreak {
+    protected createBreakNode(
+        breakType: 'page' | 'line' | 'column' = 'line',
+    ): WmlBreak {
+        console.log('Break Type:', breakType)
+
         return {
             type: DomType.Break,
             breakType,

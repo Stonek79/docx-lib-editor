@@ -169,6 +169,10 @@ export interface WmlTable extends OpenXmlElement {
         width?: number
         borders?: TableBorders
         style?: string
+        widthType?: string
+        alignment?: string
+        pageBreakBefore?: boolean
+        pageBreakAfter?: boolean
     }
 }
 

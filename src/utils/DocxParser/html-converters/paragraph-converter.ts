@@ -121,6 +121,7 @@ export class ParagraphConverter {
                         }
                     }
                 }
+
                 return this.convertRunToHtml(child)
             })
             .join('')
@@ -297,7 +298,17 @@ export class ParagraphConverter {
             let content = ''
             if ('content' in run) {
                 for (const child of run.content) {
-                    if ('text' in child) {
+                    if ('breakType' in child) {                    
+                        // Обрабатываем разрывы страниц и строк                        
+                        if (child.breakType === 'page') {                      
+                            this.hasPageBreak = true
+                            content += '<span class="page-break"></span>'
+                        } else if (child.breakType === 'line') {
+                            content += '<br>'
+                        } else if (child.breakType === 'column') {
+                            content += '<span class="column-break"></span>'
+                        }
+                    } else if ('text' in child) {
                         if (
                             'isFootnoteRef' in child &&
                             child.isFootnoteRef &&
@@ -310,16 +321,6 @@ export class ParagraphConverter {
                         }
                     } else if ('char' in child) {
                         content += `<span${styleString}>${child.char}</span>`
-                    } else if ('breakType' in child) {
-                        // Обрабатываем разрывы страниц и строк
-                        if (child.breakType === 'page') {
-                            this.hasPageBreak = true
-                            content += '<span class="page-break"></span>'
-                        } else if (child.breakType === 'line') {
-                            content += '<br>'
-                        } else if (child.breakType === 'column') {
-                            content += '<span class="column-break"></span>'
-                        }
                     }
                 }
             }
@@ -441,13 +442,13 @@ export class ParagraphConverter {
         }
 
         // Добавляем вертикальное выравнивание
-        // if (runStyle.vertAlign) {
-        //     if (runStyle.vertAlign === 'superscript') {
-        //         inlineStyles.push('vertical-align: super')
-        //     } else if (runStyle.vertAlign === 'subscript') {
-        //         inlineStyles.push('vertical-align: sub')
-        //     }
-        // }
+        if (runStyle.vertAlign) {
+            if (runStyle.vertAlign === 'superscript') {
+                inlineStyles.push('vertical-align: super')
+            } else if (runStyle.vertAlign === 'subscript') {
+                inlineStyles.push('vertical-align: sub')
+            }
+        }
 
         // Добавляем цвет
         if (runStyle.color) {

@@ -5,6 +5,7 @@ import { DocxParser } from '@/utils/DocxParser'
 import { PageBreaker } from '@/utils/PageBreaker/pageBreaker'
 import '@/styles/a4.css'
 import { LoadedHtmlContentContainer } from '@/features'
+import JSZip from 'jszip'
 
 /**
  * Компонент редактора DOCX документов
@@ -27,7 +28,7 @@ export function DocumentEditor() {
     // Ссылка на контейнер содержимого
     const contentRef = useRef<HTMLDivElement>(null)
     // Ссылка на объект PageBreaker
-    const pageBreakerRef = useRef<PageBreaker | null>(null)
+    // const pageBreakerRef = useRef<PageBreaker | null>(null)
     const fileInputRef = useRef<HTMLInputElement | null>(null)
 
     /**
@@ -37,15 +38,17 @@ export function DocumentEditor() {
     const handleFileSelect = async (
         event: React.ChangeEvent<HTMLInputElement>,
     ) => {
-        console.log('OPEN')
-
         const file = event.target.files?.[0]
         if (!file || !file.name.endsWith('.docx')) return
 
+        const zip = new JSZip()
+        zip.loadAsync(file).then((zip) => {
+          console.log(zip);
+        })
         // Сбрасываем PageBreaker
-        if (pageBreakerRef.current) {
-            pageBreakerRef.current = null
-        }
+        // if (pageBreakerRef.current) {
+        //     pageBreakerRef.current = null
+        // }
 
         setLoading(true)
         
@@ -68,27 +71,27 @@ export function DocumentEditor() {
     /**
      * Инициализация PageBreaker после загрузки содержимого
      */
-    useEffect(() => {
-        if (content && contentRef.current) {
-            // Ждем, пока DOM обновится с новым содержимым
-            setTimeout(() => {
-                // Если PageBreaker еще не создан, создаем его
-                if (!pageBreakerRef.current) {
-                    pageBreakerRef.current = new PageBreaker()
-                }
+    // useEffect(() => {
+    //     if (content && contentRef.current) {
+    //         // Ждем, пока DOM обновится с новым содержимым
+    //         setTimeout(() => {
+    //             // Если PageBreaker еще не создан, создаем его
+    //             if (!pageBreakerRef.current) {
+    //                 pageBreakerRef.current = new PageBreaker()
+    //             }
 
-                // Находим контейнер страниц внутри contentRef
-                const pagesContainer = contentRef.current?.querySelector(
-                    '.a4-pages-container',
-                )
+    //             // Находим контейнер страниц внутри contentRef
+    //             const pagesContainer = contentRef.current?.querySelector(
+    //                 '.a4-pages-container',
+    //             )
 
-                if (pagesContainer) {
-                    // Инициализируем PageBreaker с контейнером страниц
-                    pageBreakerRef.current.init(pagesContainer as HTMLElement)
-                }
-            }, 100)
-        }
-    }, [content])
+    //             if (pagesContainer) {
+    //                 // Инициализируем PageBreaker с контейнером страниц
+    //                 pageBreakerRef.current.init(pagesContainer as HTMLElement)
+    //             }
+    //         }, 100)
+    //     }
+    // }, [content])
 
     return (
         <Box

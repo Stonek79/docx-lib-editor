@@ -1,4 +1,4 @@
-import { ParagraphProperties, RunProperties } from '@/types/docx-properties'
+import { ParagraphProperties, RunProperties, TableProperties } from '@/types/docx-properties'
 import { BorderStyle, TableBorders } from '@/types/document'
 
 /**
@@ -36,6 +36,8 @@ export class PropertiesParser {
                 lineRule: props['w:spacing']?.['@_w:lineRule'],
             },
             outlineLevel: parseInt(props['w:outlineLvl']?.['@_w:val'] || '0'),
+            pageBreakBefore: Boolean(props['w:pageBreakBefore']),
+            pageBreakAfter: Boolean(props['w:pageBreakAfter']),
         }
     }
 
@@ -54,7 +56,9 @@ export class PropertiesParser {
             italic: !!props['w:i'],
             underline: props['w:u']?.['@_w:val'],
             strike: !!props['w:strike'],
-            vertAlign: props['w:vertAlign']?.['@_w:val'] as 'superscript' | 'subscript',
+            vertAlign: props['w:vertAlign']?.['@_w:val'] as
+                | 'superscript'
+                | 'subscript',
             color: props['w:color']?.['@_w:val'],
             highlight: props['w:highlight']?.['@_w:val'],
             hyperlink: props['w:hyperlink']?.['@_r:id'],
@@ -68,11 +72,7 @@ export class PropertiesParser {
      * @returns Объект свойств таблицы или undefined
      */
     static parseTableProperties(props: any):
-        | {
-              width?: number
-              style?: string
-              borders?: TableBorders
-          }
+        | TableProperties
         | undefined {
         if (!props) return undefined
 
@@ -81,6 +81,10 @@ export class PropertiesParser {
             width: parseInt(props['w:tblW']?.['@_w:w'] || '0'),
             style: styleId || undefined,
             borders: this.parseBorders(props['w:tblBorders']),
+            widthType: props['w:tblW']?.['@_w:type'],
+            alignment: props['w:jc']?.['@_w:val'],
+            pageBreakBefore: props['w:tblpPr']?.['@_w:pageBreakBefore'] === '1',
+            pageBreakAfter: props['w:tblpPr']?.['@_w:pageBreakAfter'] === '1',
         }
     }
 

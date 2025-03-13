@@ -135,6 +135,9 @@ export class DocxParser extends BaseParser {
                 throw new Error('Failed to load document content')
             }
 
+            console.log('Document content:', document.body.content);
+            
+
             const html = await this.convertToHtml(document.body.content)
             if (!html) {
                 console.warn('Document was converted to empty HTML')
@@ -367,8 +370,8 @@ export class DocxParser extends BaseParser {
                 endnoteContent,
                 false,
             )
-            
-            this.endnotes = endnotes            
+
+            this.endnotes = endnotes
         }
     }
 
@@ -405,6 +408,8 @@ export class DocxParser extends BaseParser {
             const pages: string[][] = [[]] // Массив страниц, каждая страница - массив HTML-строк
             let currentPage = 0
 
+            console.log('Elements: ', elements);
+            
             for (const element of elements) {
                 try {
                     if (element.type === DomType.Paragraph) {
@@ -416,14 +421,14 @@ export class DocxParser extends BaseParser {
                                 this.relationships,
                             )
 
-                        // Добавляем параграф на текущую страницу
-                        pages[currentPage].push(paragraphHtml)
-
                         // Если обнаружен разрыв страницы, создаем новую страницу
                         if (this.paragraphConverter.hasPageBreakDetected()) {
-                            currentPage++
+                            currentPage += 1
                             pages[currentPage] = []
                         }
+
+                        // Добавляем параграф на текущую страницу
+                        pages[currentPage].push(paragraphHtml)
                     } else if (element.type === DomType.Table) {
                         const tableHtml =
                             await this.tableConverter.convertTableToHtml(
@@ -433,7 +438,13 @@ export class DocxParser extends BaseParser {
                             )
 
                         // Добавляем таблицу на текущую страницу
-                        pages[currentPage].push(tableHtml)
+                        pages[currentPage].push(tableHtml)                        
+
+                        // Проверяем наличие разрыва страницы после таблицы
+                        if (this.tableConverter.hasPageBreakDetected()) {
+                            currentPage += 1
+                            pages[currentPage] = []
+                        }
                     }
                 } catch (error) {
                     console.error(
@@ -448,14 +459,17 @@ export class DocxParser extends BaseParser {
             // Получаем информацию о секциях документа
             const sections = this.documentParser.getSections()
 
+            console.log('Sections:', sections)
+
             // Конвертируем сноски в HTML
-            const footnotesHtml = this.footnotes.size > 0 
-                ? this.footnoteConverter.convertFootnotesToHtml(
-                    this.footnotes,
-                    this.styles,
-                    this.numbering
-                  )
-                : '';
+            const footnotesHtml =
+                this.footnotes.size > 0
+                    ? this.footnoteConverter.convertFootnotesToHtml(
+                          this.footnotes,
+                          this.styles,
+                          this.numbering,
+                      )
+                    : ''
 
             // Создаем HTML для каждой страницы с учетом ориентации
             const pagesHtml = pages
@@ -495,9 +509,9 @@ export class DocxParser extends BaseParser {
                 .filter((html) => html !== '') // Фильтруем пустые страницы
 
             // Добавляем скрытый контейнер с сносками, который будет использоваться для клонирования
-            const hiddenFootnotes = footnotesHtml 
-                ? `<div style="display: none;">${footnotesHtml}</div>` 
-                : '';
+            const hiddenFootnotes = footnotesHtml
+                ? `<div style="display: none;">${footnotesHtml}</div>`
+                : ''
 
             // Оборачиваем все страницы в контейнер и добавляем скрытые сноски
             return `<div class="a4-pages-container">${pagesHtml.join('\n')}${hiddenFootnotes}</div>`

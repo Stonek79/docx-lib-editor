@@ -339,7 +339,8 @@
 
 /* Стили для разрывов страниц */
 .page-break {
-    display: none;
+    display: block;
+    page-break-before: always;
 }
 
 /* Стили для разрывов колонок */

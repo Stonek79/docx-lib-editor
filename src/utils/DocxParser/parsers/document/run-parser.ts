@@ -29,18 +29,22 @@ export class RunParser extends BaseParser implements DocumentElementParser {
      */
     parse(element: any): WmlRun {
         const run = element['w:r']
-        
+
         // Парсим свойства
-        const properties = run['w:rPr'] ? PropertiesParser.parseRunProperties(run['w:rPr']) : {}
-        
+        const properties = run['w:rPr']
+            ? PropertiesParser.parseRunProperties(run['w:rPr'])
+            : {}
+
         // Проверяем наличие гиперссылки
         if (element['w:hyperlink'] && properties) {
             properties.hyperlink = element['w:hyperlink']['@_r:id']
         }
         
+        const content = []
+
         // Парсим содержимое
-        const content = this.parseRunContent(run)
-        
+        content.push(...this.parseRunContent(run))
+
         return {
             type: DomType.Run,
             content,
@@ -53,8 +57,24 @@ export class RunParser extends BaseParser implements DocumentElementParser {
      * @param run - XML элемент текстового прогона
      * @returns Массив текстовых узлов и символов
      */
-    private parseRunContent(run: any): (WmlText | WmlSymbol | WmlBreak)[] {
+    private parseRunContent(
+        run: any,
+    ): (WmlText | WmlSymbol | WmlBreak)[] {
         const elements: (WmlText | WmlSymbol | WmlBreak)[] = []
+        
+        // Обрабатываем разрывы страниц и строк
+        const breaks = run['w:br'] || ''
+        if (breaks) {
+            const breakElements = Array.isArray(breaks) ? breaks : [breaks]
+
+            for (const br of breakElements) {
+                if (br['@_w:type'] === 'page') {
+                    elements.push(this.createBreakNode('page'))
+                } else {
+                    elements.push(this.createBreakNode('line'))
+                }
+            }
+        }
 
         if (run['w:t']) {
             // Проверяем разные варианты хранения текста
@@ -64,34 +84,24 @@ export class RunParser extends BaseParser implements DocumentElementParser {
             } else if (run['w:t']?.['#text']) {
                 text = run['w:t']['#text']
             } else if (Array.isArray(run['w:t'])) {
-                text = run['w:t'].map(t => t?.['#text'] || '').join('')
+                text = run['w:t'].map((t) => t?.['#text'] || '').join('')
             }
-            
+
             // Обрабатываем пробелы
             if (run['w:t']?.['@_xml:space'] === 'preserve') {
                 text = text.replace(/ /g, '\u00A0')
             }
-            
+
             if (text) {
                 elements.push(this.createTextNode(text))
             }
         }
-        
-        // Обрабатываем разрывы страниц и строк
-        if (run['w:br']) {
-            const breakElements = Array.isArray(run['w:br']) ? run['w:br'] : [run['w:br']]
-            
-            for (const br of breakElements) {
-                const breakType = br['@_w:type'] || 'line'
-                elements.push(this.createBreakNode(breakType))
-            }
-        }
-        
+
         // Обрабатываем сноски
         if (run['w:footnoteReference']) {
             const id = run['w:footnoteReference']['@_w:id']
-            // Создаем текстовый узел с параметрами сноски            
-            elements.push(this.createTextNode(id, true, id))            
+            // Создаем текстовый узел с параметрами сноски
+            elements.push(this.createTextNode(id, true, id))
         }
 
         if (run['w:sym']) {
@@ -117,22 +127,26 @@ export class RunParser extends BaseParser implements DocumentElementParser {
      * @param footnoteId - Идентификатор сноски
      * @returns Текстовый узел
      */
-    protected override createTextNode(text: string, isFootnoteRef?: boolean, footnoteId?: string): WmlText {
+    protected override createTextNode(
+        text: string,
+        isFootnoteRef?: boolean,
+        footnoteId?: string,
+    ): WmlText {
         if (isFootnoteRef && footnoteId) {
             return {
                 type: DomType.Text,
                 text: `${footnoteId}`,
                 isFootnoteRef,
-                footnoteId
-            };
+                footnoteId,
+            }
         }
-        
+
         return {
             type: DomType.Text,
             text,
             isFootnoteRef,
-            footnoteId
-        };
+            footnoteId,
+        }
     }
 
     /**
@@ -148,13 +162,15 @@ export class RunParser extends BaseParser implements DocumentElementParser {
             char,
         }
     }
-    
+
     /**
      * Создает узел разрыва страницы или строки
      * @param breakType - Тип разрыва: page, line или column
      * @returns Узел разрыва
      */
-    protected createBreakNode(breakType: 'page' | 'line' | 'column' = 'line'): WmlBreak {
+    protected createBreakNode(
+        breakType: 'page' | 'line' | 'column' = 'line',
+    ): WmlBreak {
         return {
             type: DomType.Break,
             breakType,

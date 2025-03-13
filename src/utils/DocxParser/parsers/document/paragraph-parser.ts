@@ -44,7 +44,19 @@ export class ParagraphParser
         const properties = paragraph['w:pPr']
             ? PropertiesParser.parseParagraphProperties(paragraph['w:pPr'])
             : {}
-        const content = this.parseContent(paragraph)
+
+        const pageBreakBefore = properties?.pageBreakBefore
+
+        const content = []
+
+        if (pageBreakBefore) {            
+            content.push(...this.parseContent({ 'w:r': { 'w:br': { '@_w:type': 'page' } } }))
+            
+            content.push(...this.parseContent(paragraph))
+        } else {
+            content.push(...this.parseContent(paragraph))
+        }
+
 
         // Парсим нумерацию
         const numPr = paragraph['w:pPr']?.['w:numPr']
@@ -83,7 +95,7 @@ export class ParagraphParser
             if (numId) {
                 numbering = {
                     id: String(numId),
-                    level: level
+                    level: level,
                 }
             }
         }
@@ -99,7 +111,10 @@ export class ParagraphParser
             }
 
             // Если число, проверяем на NaN и Infinity
-            if (typeof paraId === 'number' && (isNaN(paraId) || !isFinite(paraId))) {
+            if (
+                typeof paraId === 'number' &&
+                (isNaN(paraId) || !isFinite(paraId))
+            ) {
                 paraId = null
             } else if (typeof paraId !== 'number') {
                 paraId = null
@@ -162,7 +177,7 @@ export class ParagraphParser
         if (pPr['w:pBdr']) {
             const borders = pPr['w:pBdr']
             formatting.borders = {}
-            
+
             const sides = ['top', 'left', 'bottom', 'right']
             for (const side of sides) {
                 const key = `w:${side}`
@@ -195,18 +210,17 @@ export class ParagraphParser
      * @returns Массив текстовых прогонов и текстовых узлов
      */
     private parseContent(paragraph: any): (WmlRun | WmlText)[] {
-        const content: (WmlRun | WmlText)[] = []
+        const content: (WmlRun | WmlText)[] = []    
+        const run = paragraph['w:r']
         
-        if (paragraph['w:r']) {
-            const runs = Array.isArray(paragraph['w:r'])
-                ? paragraph['w:r']
-                : [paragraph['w:r']]
+        if (run) {
+            const runs = Array.isArray(run) ? run : [run]
 
             // Собираем все прогоны с одинаковыми свойствами
             let currentRun = null
             let currentProperties = null
 
-            for (const run of runs) {
+            for (const run of runs) {                
                 const parsedRun = this.runParser.parse({ 'w:r': run })
 
                 // Если свойства совпадают с предыдущим прогоном, объединяем содержимое
@@ -229,7 +243,7 @@ export class ParagraphParser
 
             // Добавляем последний прогон
             if (currentRun) {
-                content.push(currentRun)
+                content.push(currentRun)                
             }
         }
 

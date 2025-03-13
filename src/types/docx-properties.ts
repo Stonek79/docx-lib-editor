@@ -41,6 +41,10 @@ export interface ParagraphProperties {
     }
     /** Уровень структуры документа (0-9) */
     outlineLevel?: number
+    /** Перенос страницы перед параграфом */
+    pageBreakBefore?: boolean
+    /** Перенос страницы после параграфа */
+    pageBreakAfter?: boolean
 }
 
 /**
@@ -111,6 +115,10 @@ export interface TableProperties {
     style?: string
     /** Границы таблицы */
     borders?: TableBorders
+    widthType?: string
+    alignment?: string
+    pageBreakBefore?: boolean
+    pageBreakAfter?: boolean
 }
 
 /**
